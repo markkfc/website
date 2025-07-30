@@ -1,60 +1,90 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
 function App() {
-  const [equation, setEquation] = useState('');
-  const [answer, setAnswer] = useState('');
+  const [factoredForm, setFactoredForm] = useState('');
+  const [standardForm, setStandardForm] = useState('');
+  const [roots, setRoots] = useState('');
   const [showAnswer, setShowAnswer] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(20);
+  const [animate, setAnimate] = useState(false);
+  const timerRef = useRef(null);
 
-  const generateQuadraticWithRealRoots = () => {
-    let a, b, c, discriminant;
+  const generateFoilQuestion = () => {
+    const a = 1; // keep it simple: (x + m)(x + n)
+    const m = Math.floor(Math.random() * 11) - 5; // -5 to 5
+    const n = Math.floor(Math.random() * 11) - 5;
 
-    // Keep generating until we get a discriminant ≥ 0
-    do {
-      a = Math.floor(Math.random() * 5) + 1;     // 1 to 5
-      b = Math.floor(Math.random() * 21) - 10;   // -10 to 10
-      c = Math.floor(Math.random() * 21) - 10;   // -10 to 10
-      discriminant = b * b - 4 * a * c;
-    } while (discriminant < 0);
+    const factored = `(x ${m >= 0 ? '+' : '-'} ${Math.abs(m)})(x ${n >= 0 ? '+' : '-'} ${Math.abs(n)})`;
+    const b = m + n;
+    const c = m * n;
+    const standard = `x² ${b >= 0 ? '+' : '-'} ${Math.abs(b)}x ${c >= 0 ? '+' : '-'} ${Math.abs(c)} = 0`;
 
-    const equationStr = `${a}x² ${b >= 0 ? '+' : '-'} ${Math.abs(b)}x ${c >= 0 ? '+' : '-'} ${Math.abs(c)} = 0`;
+    const rootStr = `x₁ = ${-m}, x₂ = ${-n}`;
 
-    let solution = '';
-    if (discriminant === 0) {
-      const x = -b / (2 * a);
-      solution = `One real root: x = ${x.toFixed(2)}`;
-    } else {
-      const sqrtD = Math.sqrt(discriminant);
-      const x1 = (-b + sqrtD) / (2 * a);
-      const x2 = (-b - sqrtD) / (2 * a);
-      solution = `Two real roots: x₁ = ${x1.toFixed(2)}, x₂ = ${x2.toFixed(2)}`;
-    }
-
-    setEquation(equationStr);
-    setAnswer(solution);
+    setFactoredForm(factored);
+    setStandardForm(standard);
+    setRoots(rootStr);
     setShowAnswer(false);
-  };
-
-  const handleShowAnswer = () => {
-    setShowAnswer(true);
+    setTimeLeft(20);
+    setAnimate(false);
   };
 
   const handleNext = () => {
-    generateQuadraticWithRealRoots();
+    clearInterval(timerRef.current);
+    generateFoilQuestion();
+  };
+
+  const handleManualReveal = () => {
+    clearInterval(timerRef.current);
+    setShowAnswer(true);
+    setAnimate(true);
   };
 
   useEffect(() => {
-    generateQuadraticWithRealRoots();
+    generateFoilQuestion();
   }, []);
+
+  useEffect(() => {
+    if (showAnswer) return;
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          setShowAnswer(true);
+          setAnimate(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerRef.current);
+  }, [factoredForm]);
 
   return (
     <div className="App">
+      <div className="timer">{timeLeft}s</div>
+
       <div className="container">
-        <h1>Quadratic Equation Generator</h1>
-        <div className="question">Equation: {equation}</div>
-        {showAnswer && <div className="answer">{answer}</div>}
+        <h1>FOIL Method Quadratics</h1>
+        <div className="question">From: <strong>{factoredForm}</strong></div>
+        <div className="question">Expanded: <strong>{standardForm}</strong></div>
+
+        {showAnswer && (
+          <div className={`answer ${animate ? 'pop' : ''}`}>
+            Solution: {roots}
+          </div>
+        )}
+
+        {!showAnswer && (
+          <div className="buttons">
+            <button onClick={handleManualReveal}>Show Answer</button>
+          </div>
+        )}
+
         <div className="buttons">
-          <button onClick={handleShowAnswer}>Show Answer</button>
           <button onClick={handleNext}>Next</button>
         </div>
       </div>
